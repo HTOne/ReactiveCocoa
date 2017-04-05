@@ -44,8 +44,10 @@ class UITextFieldSpec: QuickSpec {
 				latestValue = text
 			}
 
-			textField.sendActions(for: .editingChanged)
-			expect(latestValue) == textField.text
+			for event in UIControlEvents.editingEvents {
+				textField.sendActions(for: event)
+				expect(latestValue) == textField.text
+			}
 		}
 		
 		it("should accept changes from bindings to its attributed text value") {
@@ -83,9 +85,11 @@ class UITextFieldSpec: QuickSpec {
 			textField.reactive.continuousAttributedTextValues.observeValues { attributedText in
 				latestValue = attributedText
 			}
-			
-			textField.sendActions(for: .editingChanged)
-			expect(latestValue?.string) == textField.attributedText?.string
+
+			for event in UIControlEvents.editingEvents {
+				textField.sendActions(for: event)
+				expect(latestValue?.string) == textField.attributedText?.string
+			}
 		}
 
 		it("should accept changes from bindings to its secureTextEntry attribute") {
@@ -109,5 +113,11 @@ class UITextFieldSpec: QuickSpec {
 			observer.send(value: UIColor.blue)
 			expect(textField.textColor == UIColor.red) == false
 		}
+	}
+}
+
+extension UIControlEvents {
+	fileprivate static var editingEvents: [UIControlEvents] {
+		return [.allEditingEvents, .editingDidBegin, .editingChanged, .editingDidEndOnExit, .editingDidEnd]
 	}
 }
