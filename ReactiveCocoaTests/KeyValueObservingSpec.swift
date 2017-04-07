@@ -164,6 +164,10 @@ fileprivate class KeyValueObservingSpecConfiguration: QuickConfiguration {
 			// `#keyPath` does not work with weak relationships.
 			return observe(object, "rac_weakObject.rac_value")
 		}
+
+		func dependentKeyChanges(_ object: NSObject) -> SignalProducer<Any?, NoError> {
+			return observe(object, #keyPath(ObservableObject.rac_value_plusOne))
+		}
 	}
 
 	override class func configure(_ configuration: Configuration) {
@@ -191,6 +195,26 @@ fileprivate class KeyValueObservingSpecConfiguration: QuickConfiguration {
 
 				object.rac_value = 1
 				expect(values) == [0, 1, 1]
+			}
+
+			it("should send new values for the dependent key path (even if the value remains unchanged)") {
+				let object = ObservableObject()
+				var values: [Int] = []
+
+				context.dependentKeyChanges(object).startWithValues {
+					values.append(($0 as! NSNumber).intValue)
+				}
+
+				expect(values) == []
+
+				object.rac_value = 0
+				expect(values) == [1]
+
+				object.rac_value = 1
+				expect(values) == [1, 2]
+
+				object.rac_value = 1
+				expect(values) == [1, 2, 2]
 			}
 
 			it("should not crash an Operation") {
@@ -469,6 +493,18 @@ fileprivate class KeyValueObservingSpecConfiguration: QuickConfiguration {
 
 private class ObservableObject: NSObject {
 	dynamic var rac_value: Int = 0
+
+	dynamic var rac_value_plusOne: Int {
+		return rac_value + 1
+	}
+
+	override class func keyPathsForValuesAffectingValue(forKey key: String) -> Set<String> {
+		if key == "rac_value_plusOne" {
+			return Set([#keyPath(ObservableObject.rac_value)])
+		} else {
+			return Set()
+		}
+	}
 }
 
 private class NestedObservableObject: NSObject {
